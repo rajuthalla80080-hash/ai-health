@@ -489,9 +489,10 @@ export const generateDailyPlan = async (userState: UserState): Promise<DailyPlan
                     verifiedSources: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of URLs found during search grounding" }, 
                     bioMechanism: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, summary: { type: Type.STRING }, visualMetaphor: { type: Type.STRING }, steps: { type: Type.ARRAY, items: { type: Type.STRING } }, molecularSynergy: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { drugMolecule: { type: Type.STRING }, foodMolecule: { type: Type.STRING }, matchScore: { type: Type.NUMBER }, source: { type: Type.STRING } } } } } }, 
                     medicineReminders: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { time: { type: Type.STRING }, instruction: { type: Type.STRING } } } }, 
-                    meals: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { type: { type: Type.STRING }, title: { type: Type.STRING }, description: { type: Type.STRING }, bioActiveTag: { type: Type.STRING }, reason: { type: Type.STRING }, calories: { type: Type.STRING }, ingredients: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { name: { type: Type.STRING }, quantity: { type: Type.STRING }, icon: { type: Type.STRING }, molecularMatch: { type: Type.STRING } } } }, cookingSteps: { type: Type.ARRAY, items: { type: Type.STRING } }, outsideOption: { type: Type.STRING } } } } 
-            } 
-        } 
+                    meals: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { type: { type: Type.STRING }, title: { type: Type.STRING }, description: { type: Type.STRING }, bioActiveTag: { type: Type.STRING }, reason: { type: Type.STRING }, calories: { type: Type.STRING }, ingredients: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { name: { type: Type.STRING }, quantity: { type: Type.STRING }, icon: { type: Type.STRING }, molecularMatch: { type: Type.STRING } } } }, cookingSteps: { type: Type.ARRAY, items: { type: Type.STRING } }, outsideOption: { type: Type.STRING } } } }
+                }
+            }
+        }
     });
 
     const plan = cleanAndParseJSON(response.text || "{}") as DailyPlan;
