@@ -87,7 +87,7 @@ export const Button: React.FC<ButtonProps> = ({
     
     ghost: "bg-transparent text-text-secondary hover:text-primary hover:bg-accent/30",
     
-    floating: "absolute bottom-24 right-6 bg-gradient-to-r from-[#1F2D2A] to-[#3A7D6E] text-white shadow-2xl shadow-black/20 z-50 rounded-full py-4 px-8 text-sm font-bold tracking-wider hover:scale-105",
+    floating: "fixed bottom-32 right-6 bg-gradient-to-r from-[#1F2D2A] to-[#3A7D6E] text-white shadow-2xl shadow-black/20 z-30 rounded-full py-4 px-8 text-sm font-bold tracking-wider hover:scale-105 transition-transform",
     
     outline: "bg-transparent border-2 border-primary/40 text-primary hover:bg-primary/5 hover:border-primary"
   };

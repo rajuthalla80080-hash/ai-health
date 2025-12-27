@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Layout, Container, Heading, SubHeading, BodyText, Card, Button, RangeSlider, BottomNav, FadeIn, Checkbox, Modal } from './components/DesignSystem';
 import { ScreenName, UserMode, UserState, Meal, GoalOption, NutritionFact, GeneratedRecipe, PrescriptionItem, JunkFoodAdvice, LocalService, HealthMode, BioMechanism, ChatMessage, IngredientCheckResult } from './types';
 import { generateDailyPlan, generateGoalsForContext, analyzeCookingStep, analyzeNutrition, generateRecipeFromImage, analyzeHealthCondition, generateCorporateInsights, generateJunkFoodAdvice, findCookingVideo, findLocalGrocers, findRestaurantOptions, detectLocationFromCoords, simulateWearableData, regenerateMealOption, editImageWithGenAI, chatWithHealthBot, transcribeAudio, generateSpeech, verifyLocationEntry, findDeliveryPartners, checkIngredientAvailability, findPharmacies, generateWearableInsight, analyzeFoodText, findOnlinePharmacies } from './services/geminiService';
+import { signUp, signIn, signOut, onAuthStateChange } from './services/supabaseClient';
 
 // --- Assets / Icons ---
 const Icons = {
@@ -582,35 +583,125 @@ const MedicineOrderModal: React.FC<{
     );
 };
 
-// --- New Auth Screen Component (Simulated Login) ---
-const AuthScreen: React.FC<{ onLoginSuccess: (user: any) => void; onSkip: () => void }> = ({ onLoginSuccess, onSkip }) => {
-    const [name, setName] = useState("");
-    
-    const handleLogin = () => {
-        if(!name.trim()) return;
-        // Mock user creation
-        onLoginSuccess({
-            uid: 'local-user-' + Date.now(),
-            displayName: name,
-            email: null
-        });
+// --- Login Screen ---
+const LoginScreen: React.FC<{ onSuccess: (user: any) => void; onSignUp: () => void; onGuest: () => void }> = ({ onSuccess, onSignUp, onGuest }) => {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+
+    const handleLogin = async () => {
+        if (!email.trim() || !password.trim()) return;
+        setLoading(true);
+        setError("");
+        try {
+            const result = await signIn(email, password);
+            onSuccess(result.user);
+        } catch (err: any) {
+            setError(err.message || "Login failed");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
         <Container className="justify-center">
-             <div className="text-center mb-10 animate-slideUp">
+            <div className="text-center mb-10 animate-slideUp">
                 <div className="text-6xl mb-4">🌿</div>
                 <Heading>Welcome Back</Heading>
-                <BodyText>Enter your name to access your personal health plan.</BodyText>
+                <BodyText>Sign in to access your personal health plan.</BodyText>
             </div>
             <div className="space-y-4 animate-slideUp">
-                <input 
-                    placeholder="Your Name" 
-                    className="w-full p-4 rounded-2xl border bg-gray-50 text-center text-lg" 
-                    value={name} 
-                    onChange={e => setName(e.target.value)}
+                {error && <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{error}</div>}
+                <input
+                    placeholder="Email"
+                    type="email"
+                    className="w-full p-4 rounded-2xl border bg-gray-50 text-sm"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
                 />
-                <Button fullWidth onClick={handleLogin} disabled={!name.trim()}>Continue</Button>
+                <input
+                    placeholder="Password"
+                    type="password"
+                    className="w-full p-4 rounded-2xl border bg-gray-50 text-sm"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                />
+                <Button fullWidth onClick={handleLogin} disabled={!email.trim() || !password.trim() || loading}>
+                    {loading ? "Signing in..." : "Sign In"}
+                </Button>
+                <Button fullWidth variant="ghost" onClick={onSignUp}>Create Account</Button>
+                <Button fullWidth variant="secondary" onClick={onGuest}>Continue as Guest</Button>
+            </div>
+        </Container>
+    );
+};
+
+// --- SignUp Screen ---
+const SignUpScreen: React.FC<{ onSuccess: (user: any) => void; onLogin: () => void }> = ({ onSuccess, onLogin }) => {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+
+    const handleSignUp = async () => {
+        if (!email.trim() || !password.trim()) return;
+        if (password !== confirmPassword) {
+            setError("Passwords don't match");
+            return;
+        }
+        if (password.length < 6) {
+            setError("Password must be at least 6 characters");
+            return;
+        }
+
+        setLoading(true);
+        setError("");
+        try {
+            const result = await signUp(email, password, email.split('@')[0]);
+            onSuccess(result.user);
+        } catch (err: any) {
+            setError(err.message || "Sign up failed");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Container className="justify-center">
+            <div className="text-center mb-10 animate-slideUp">
+                <div className="text-6xl mb-4">🌿</div>
+                <Heading>Create Account</Heading>
+                <BodyText>Join to get your personalized health plan.</BodyText>
+            </div>
+            <div className="space-y-4 animate-slideUp">
+                {error && <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{error}</div>}
+                <input
+                    placeholder="Email"
+                    type="email"
+                    className="w-full p-4 rounded-2xl border bg-gray-50 text-sm"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                />
+                <input
+                    placeholder="Password (min 6 chars)"
+                    type="password"
+                    className="w-full p-4 rounded-2xl border bg-gray-50 text-sm"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                />
+                <input
+                    placeholder="Confirm Password"
+                    type="password"
+                    className="w-full p-4 rounded-2xl border bg-gray-50 text-sm"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                />
+                <Button fullWidth onClick={handleSignUp} disabled={!email.trim() || !password.trim() || loading}>
+                    {loading ? "Creating..." : "Create Account"}
+                </Button>
+                <Button fullWidth variant="ghost" onClick={onLogin}>Already have an account?</Button>
             </div>
         </Container>
     );
@@ -659,14 +750,15 @@ const UpgradeScreen: React.FC<{ onBack: () => void; onUpgrade: () => void }> = (
 
 
 export default function App() {
-  const [screen, setScreen] = useState<ScreenName>(ScreenName.WELCOME);
+  const [screen, setScreen] = useState<ScreenName>(ScreenName.LOGIN);
   const [activeTab, setActiveTab] = useState('Today');
   const [showMechanism, setShowMechanism] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [userState, setUserState] = useState<UserState>({
     isAuthenticated: false,
     isLocalGuest: false,
     isPremium: false,
-    generationsLeft: 3, // Freemium limit
+    generationsLeft: 3,
     mode: UserMode.CONSUMER,
     healthMode: HealthMode.GENERAL,
     goals: [],
@@ -682,7 +774,7 @@ export default function App() {
     planGenerationMode: 'STANDARD',
     progress: {
         junkCalories: 0,
-        caloriesTarget: 2200, 
+        caloriesTarget: 2200,
         waterIntake: 0,
         waterTarget: 8,
         lastResetDate: new Date().toISOString(),
@@ -692,12 +784,12 @@ export default function App() {
         molecularSynergyScore: 0
     }
   });
-  
+
   const [generatedGoals, setGeneratedGoals] = useState<GoalOption[]>([]);
-  const [showFoodLogger, setShowFoodLogger] = useState(false); 
-  const [showChat, setShowChat] = useState(false); 
+  const [showFoodLogger, setShowFoodLogger] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const [showServiceModal, setShowServiceModal] = useState(false);
-  const [showMedicineOrderModal, setShowMedicineOrderModal] = useState(false); 
+  const [showMedicineOrderModal, setShowMedicineOrderModal] = useState(false);
   const [showBugReport, setShowBugReport] = useState(false);
   const [serviceQuery, setServiceQuery] = useState<{item: string | string[], type: 'GROCERY' | 'RESTAURANT' | 'PHARMACY'} | null>(null);
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
@@ -705,20 +797,37 @@ export default function App() {
   const [hydrationTimeLeft, setHydrationTimeLeft] = useState<string>("");
   const [isHydrationLocked, setIsHydrationLocked] = useState(false);
   const [detectingLocation, setDetectingLocation] = useState(false);
-  const [verifyingLocation, setVerifyingLocation] = useState(false); 
+  const [verifyingLocation, setVerifyingLocation] = useState(false);
   const [analyzingHealth, setAnalyzingHealth] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isAnalyzingWork, setIsAnalyzingWork] = useState(false);
-  const [analysisStep, setAnalysisStep] = useState(0); 
+  const [analysisStep, setAnalysisStep] = useState(0);
   const [mealToEdit, setMealToEdit] = useState<Meal | null>(null);
   const [wearableInsight, setWearableInsight] = useState<string | null>(null);
 
+  useEffect(() => {
+    const subscription = onAuthStateChange((user) => {
+      setCurrentUser(user);
+      if (!user) {
+        setScreen(ScreenName.LOGIN);
+      }
+    });
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []);
+
   const handleLogout = async () => {
-      // Local reset
+    try {
+      await signOut();
+      setCurrentUser(null);
       updateState('isAuthenticated', false);
       updateState('isLocalGuest', false);
       updateState('uid', undefined);
-      setScreen(ScreenName.WELCOME);
+      setScreen(ScreenName.LOGIN);
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
   };
 
   const updateState = (key: keyof UserState, value: any) => {
@@ -784,7 +893,38 @@ export default function App() {
 
   const renderContent = () => {
     switch(screen) {
-        case ScreenName.WELCOME: 
+        case ScreenName.LOGIN:
+            return (
+                <LoginScreen
+                    onSuccess={(user) => {
+                        setCurrentUser(user);
+                        updateState('isAuthenticated', true);
+                        updateState('uid', user.id);
+                        updateState('name', user.user_metadata?.display_name || user.email?.split('@')[0] || '');
+                        setScreen(ScreenName.LANGUAGE);
+                    }}
+                    onSignUp={() => setScreen(ScreenName.SIGNUP)}
+                    onGuest={() => {
+                        updateState('isLocalGuest', true);
+                        updateState('isAuthenticated', true);
+                        setScreen(ScreenName.LANGUAGE);
+                    }}
+                />
+            );
+        case ScreenName.SIGNUP:
+            return (
+                <SignUpScreen
+                    onSuccess={(user) => {
+                        setCurrentUser(user);
+                        updateState('isAuthenticated', true);
+                        updateState('uid', user.id);
+                        updateState('name', user.user_metadata?.display_name || user.email?.split('@')[0] || '');
+                        setScreen(ScreenName.LANGUAGE);
+                    }}
+                    onLogin={() => setScreen(ScreenName.LOGIN)}
+                />
+            );
+        case ScreenName.WELCOME:
             return (
                 <Container className="justify-end pb-12 bg-gradient-to-br from-white to-green-50">
                     <FadeIn>
@@ -792,15 +932,14 @@ export default function App() {
                         <BodyText className="mb-8">Your personalized health expert, speaking your language, knowing your city.</BodyText>
                         <div className="space-y-3">
                             <Button fullWidth onClick={() => {
-                                // Default to Guest Mode immediately for smoother onboarding
                                 updateState('isLocalGuest', true);
                                 updateState('isAuthenticated', true);
                                 setScreen(ScreenName.LANGUAGE);
                             }}>
                                 Start Your Journey
                             </Button>
-                            
-                            <Button fullWidth variant="ghost" onClick={() => setScreen(ScreenName.AUTH)}>
+
+                            <Button fullWidth variant="ghost" onClick={() => setScreen(ScreenName.LOGIN)}>
                                 Login (Save Progress)
                             </Button>
                         </div>
@@ -841,26 +980,6 @@ export default function App() {
                         </Card>
                     </div>
                 </Container>
-            );
-        case ScreenName.AUTH: 
-            return (
-                <AuthScreen 
-                    onLoginSuccess={(user) => {
-                        // Manually update state for local guest
-                        updateState('uid', user.uid);
-                        updateState('isAuthenticated', true);
-                        updateState('isLocalGuest', true);
-                        updateState('name', user.displayName);
-                        
-                        // Default to Consumer Profile Setup if coming directly
-                        if (userState.mode === UserMode.CORPORATE) {
-                            setScreen(ScreenName.ENTERPRISE_LOGIN);
-                        } else {
-                            setScreen(ScreenName.CONSUMER_LOGIN);
-                        }
-                    }} 
-                    onSkip={() => setScreen(ScreenName.LANGUAGE)} 
-                />
             );
         case ScreenName.CONSUMER_LOGIN: return <Container><NavHeader onBack={() => setScreen(ScreenName.MODE_SELECTION)} title="Back" /><Heading>Setup Profile</Heading><div className="mt-6 space-y-4"><input placeholder="What's your name?" className="w-full p-4 rounded-2xl border bg-gray-50" value={userState.name || ''} onChange={(e) => updateState('name', e.target.value)} /><div className="pt-2"><SubHeading className="text-sm uppercase tracking-widest text-text-secondary">Custom Lifestyle (Optional)</SubHeading><input placeholder="e.g. New Mom, Student..." className="w-full p-4 rounded-2xl border bg-gray-50" value={userState.customModeInput || ''} onChange={(e) => { updateState('mode', UserMode.CUSTOM); updateState('customModeInput', e.target.value); }} /></div><div className="grid grid-cols-2 gap-3"><input placeholder="Height (cm)" type="number" className="w-full p-4 rounded-2xl border bg-gray-50" value={userState.height || ''} onChange={(e) => updateState('height', e.target.value)} /><input placeholder="Weight (kg)" type="number" className="w-full p-4 rounded-2xl border bg-gray-50" value={userState.weight || ''} onChange={(e) => updateState('weight', e.target.value)} /></div><Button fullWidth disabled={!userState.name} onClick={() => setScreen(ScreenName.GOALS)}>Continue</Button></div></Container>;
         case ScreenName.ENTERPRISE_LOGIN: return <Container><NavHeader onBack={() => setScreen(ScreenName.MODE_SELECTION)} title="Back" /><Heading>Work Profile</Heading><div className="space-y-4 mt-6"><input placeholder="Your Name" className="w-full p-4 rounded-2xl border bg-gray-50" value={userState.name || ''} onChange={(e) => updateState('name', e.target.value)} /><input placeholder="Company Name" className="w-full p-4 rounded-2xl border bg-gray-50" value={userState.companyName || ''} onChange={(e) => updateState('companyName', e.target.value)} /><input placeholder="Job Domain" className="w-full p-4 rounded-2xl border bg-gray-50" value={userState.jobDomain || ''} onChange={(e) => updateState('jobDomain', e.target.value)} /><div className="grid grid-cols-2 gap-3"><input placeholder="Height (cm)" type="number" className="w-full p-4 rounded-2xl border bg-gray-50" value={userState.height || ''} onChange={(e) => updateState('height', e.target.value)} /><input placeholder="Weight (kg)" type="number" className="w-full p-4 rounded-2xl border bg-gray-50" value={userState.weight || ''} onChange={(e) => updateState('weight', e.target.value)} /></div><Button fullWidth disabled={!(userState.name && userState.companyName && userState.jobDomain) || isAnalyzingWork} onClick={handleCorporateLogin}>{isAnalyzingWork ? 'Analyzing...' : 'Analyze Work Culture'}</Button></div></Container>;
@@ -958,8 +1077,8 @@ export default function App() {
                                 <div className="flex justify-between items-start mb-2">
                                     <span className="text-xs font-bold bg-secondary/10 text-secondary px-2 py-1 rounded uppercase">{meal.type}</span>
                                     <div className="flex gap-2">
-                                        <button onClick={(e) => { e.stopPropagation(); setMealToEdit(meal); }} className="p-1 hover:bg-gray-100 rounded text-gray-400">✏️</button>
-                                        <button onClick={(e) => { e.stopPropagation(); handleToggleMeal(idx); }} className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${userState.progress.completedMealIndices.includes(idx) ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300'}`}>{userState.progress.completedMealIndices.includes(idx) && Icons.Check}</button>
+                                        <button onClick={(e) => { e.stopPropagation(); setMealToEdit(meal); }} className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors">✏️</button>
+                                        <button onClick={(e) => { e.stopPropagation(); handleToggleMeal(idx); }} className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer transition-all ${userState.progress.completedMealIndices.includes(idx) ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 hover:border-primary'}`}>{userState.progress.completedMealIndices.includes(idx) && Icons.Check}</button>
                                     </div>
                                 </div>
                                 <h3 className="text-lg font-bold group-hover:text-primary">{meal.title}</h3>
@@ -1044,7 +1163,7 @@ export default function App() {
       {(screen === ScreenName.TODAY || screen === ScreenName.PROGRESS) && (<BottomNav activeTab={activeTab === 'Today' && screen === ScreenName.TODAY ? 'Today' : 'Progress'} onTabChange={(t) => { setActiveTab(t); setScreen(t === 'Today' ? ScreenName.TODAY : ScreenName.PROGRESS); }} onScan={() => setShowFoodLogger(true)} />)}
       
       <ChatAssistant isOpen={showChat} onClose={() => setShowChat(false)} />
-      {!showChat && screen !== ScreenName.WELCOME && screen !== ScreenName.LANGUAGE && screen !== ScreenName.LOCATION && screen !== ScreenName.UPGRADE && (<Button variant="floating" onClick={() => setShowChat(true)}>💬</Button>)}
+      {!showChat && screen !== ScreenName.LOGIN && screen !== ScreenName.SIGNUP && screen !== ScreenName.WELCOME && screen !== ScreenName.LANGUAGE && screen !== ScreenName.LOCATION && screen !== ScreenName.UPGRADE && (<Button variant="floating" onClick={() => setShowChat(true)}>💬</Button>)}
       
       {/* Modals */}
       {showFoodLogger && <FoodLoggerModal onClose={() => setShowFoodLogger(false)} onLog={handleLogFood} />}
