@@ -1,0 +1,9 @@
+{
+  "name": "Calm Health Support",
+  "description": "A calm, non-judgmental health companion that helps you balance energy and digestion without strict rules.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
